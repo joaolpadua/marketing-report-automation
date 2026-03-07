@@ -9,6 +9,7 @@ __pycache__/
 
 # Variáveis de ambiente
 .env
+clientes.csv
 
 # Arquivos gerados
 out/
