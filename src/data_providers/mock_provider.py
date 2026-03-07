@@ -1,29 +1,31 @@
-from datetime import date
+import random
 
 
 class MockProvider:
-    """
-    Provider fake para simular dados de marketing.
-    Serve para testar o fluxo completo sem depender da API do Google ainda.
-    """
 
-    def get_monthly_metrics(self, client: dict) -> dict:
-        today = date.today()
-        period_label = f"{today.month:02d}/{today.year}"
+    def get_campaign_data(self, client):
 
-        clicks = 1200
-        impressions = 50000
-        ctr = round((clicks / impressions) * 100, 2)
-        cost_brl = 850.00
-        conversions = 34
-        cpa_brl = round(cost_brl / max(conversions, 1), 2)
+        campaigns = [
+            "Search Brand",
+            "Search Produto",
+            "Display Remarketing"
+        ]
 
-        return {
-            "period_label": period_label,
-            "clicks": clicks,
-            "impressions": impressions,
-            "ctr": ctr,
-            "cost_brl": cost_brl,
-            "conversions": conversions,
-            "cpa_brl": cpa_brl,
-        }
+        results = []
+
+        for campaign in campaigns:
+
+            impressions = random.randint(5000, 20000)
+            clicks = random.randint(100, 800)
+            cost = round(random.uniform(100, 800), 2)
+            conversions = random.randint(5, 40)
+
+            results.append({
+                "campaign_name": campaign,
+                "impressions": impressions,
+                "clicks": clicks,
+                "cost": cost,
+                "conversions": conversions
+            })
+
+        return results
