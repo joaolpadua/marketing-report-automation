@@ -1,5 +1,5 @@
 from src.config import Settings
-from src.clients import load_clients
+from src.clients_sheets import load_clients_from_sheets
 from src.data_providers.mock_provider import MockProvider
 from src.report.pdf_report import build_pdf_report
 from src.delivery.email_smtp import send_email_with_attachment
@@ -157,8 +157,8 @@ def main():
     # carregar configurações do .env
     settings = Settings.load()
 
-    # carregar clientes do CSV
-    clients = load_clients("clientes.csv")
+    # carregar clientes do sheets
+    clients = load_clients_from_sheets(settings.clients_sheet_url)
 
     # inicializar provider de dados (mock por enquanto)
     provider = MockProvider()

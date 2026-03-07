@@ -5,16 +5,31 @@ import os
 
 @dataclass
 class Settings:
-    report_output_dir: str
-    smtp_host: str
-    smtp_port: int
-    smtp_user: str
-    smtp_pass: str
-    email_from_name: str
-    email_from: str
-    twilio_account_sid: str
-    twilio_auth_token: str
-    twilio_whatsapp_from: str
+    def __init__(
+        self,
+        report_output_dir,
+        smtp_host,
+        smtp_port,
+        smtp_user,
+        smtp_pass,
+        email_from_name,
+        email_from,
+        twilio_account_sid,
+        twilio_auth_token,
+        twilio_whatsapp_from,
+        clients_sheet_url,
+    ):
+        self.report_output_dir = report_output_dir
+        self.smtp_host = smtp_host
+        self.smtp_port = smtp_port
+        self.smtp_user = smtp_user
+        self.smtp_pass = smtp_pass
+        self.email_from_name = email_from_name
+        self.email_from = email_from
+        self.twilio_account_sid = twilio_account_sid
+        self.twilio_auth_token = twilio_auth_token
+        self.twilio_whatsapp_from = twilio_whatsapp_from
+        self.clients_sheet_url = clients_sheet_url
 
     @staticmethod
     def load() -> "Settings":
@@ -31,4 +46,5 @@ class Settings:
             twilio_account_sid=os.getenv("TWILIO_ACCOUNT_SID", ""),
             twilio_auth_token=os.getenv("TWILIO_AUTH_TOKEN", ""),
             twilio_whatsapp_from=os.getenv("TWILIO_WHATSAPP_FROM", "whatsapp:+14155238886"),
+            clients_sheet_url=os.getenv("CLIENTS_SHEET_URL"),
         )
