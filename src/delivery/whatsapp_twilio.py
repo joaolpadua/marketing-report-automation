@@ -68,11 +68,7 @@ def send_whatsapp_message_with_media(
     if media_url:
         data["MediaUrl"] = media_url
 
-    # ----------------------------
-    # Debug útil para ver exatamente
-    # o que está sendo enviado
-    # ----------------------------
-    print("Twilio envio ->", data)
+
 
     # ----------------------------
     # Requisição POST para API Twilio
