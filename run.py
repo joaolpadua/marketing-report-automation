@@ -68,11 +68,11 @@ def send_email(client, metrics, pdf_path, settings):
         print(f"Falha no envio de email ❌ -> {exc}")
 
 
-# -------------------------------------------------------------------------
+# -----------------------------------------------------------------------
 # Responsável pelo envio da notificação via WhatsApp.
 # Mantido separado para facilitar inclusão de novos canais no futuro
 # (Slack, Telegram, etc).
-# -------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 
 def build_whatsapp_summary(client, metrics):
 
