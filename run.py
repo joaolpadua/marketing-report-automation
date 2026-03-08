@@ -2,7 +2,7 @@ from src.config import Settings
 from src.clients_sheets import load_clients_from_sheets
 from src.data_providers.mock_provider import MockProvider
 from src.report.pdf_report import build_pdf_report
-from src.delivery.email_smtp import send_email_with_attachment
+from src.delivery.email_resend import send_email_with_attachment
 from src.delivery.whatsapp_twilio import send_whatsapp_message_with_media
 
 
@@ -46,20 +46,11 @@ def send_email(client, metrics, pdf_path, settings):
     try:
 
         send_email_with_attachment(
-            smtp_host=settings.smtp_host,
-            smtp_port=settings.smtp_port,
-            smtp_user=settings.smtp_user,
-            smtp_pass=settings.smtp_pass,
-            from_name=settings.email_from_name,
+            api_key=settings.resend_api_key,
             from_email=settings.email_from,
             to_email=client["email"],
-            subject=f"Relatório de Marketing - {metrics['period_label']} - {client['client_name']}",
-            body=(
-                f"Olá, {client['client_name']}!\n\n"
-                f"Segue em anexo o relatório referente ao período {metrics['period_label']}.\n\n"
-                "Qualquer dúvida estou à disposição."
-            ),
-            attachment_path=pdf_path,
+            subject=f"Relatório de Marketing - {metrics['period_label']}",
+            body=f"Olá {client['client_name']}, seu relatório está pronto.",
         )
 
         print("Email enviado com sucesso ✅")
