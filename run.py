@@ -40,7 +40,7 @@ def aggregate_metrics(campaign_data):
 # Responsável apenas pelo envio do relatório por email.
 # Isolamos essa função para facilitar manutenção e troca futura de
 # serviço de email (SMTP, Sendgrid, AWS SES, etc).
-# -------------------------------------------------------------------------
+# ------------------------------------------------------------------------
 def send_email(client, metrics, pdf_path, settings):
     
     try:
