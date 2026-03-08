@@ -1,253 +1,278 @@
-## Marketing Report Automation
+Marketing Report Automation
 
-Automação em Python para geração e envio automático de relatórios de marketing para múltiplos clientes.
+Automação em Python para geração e envio automático de relatórios de
+marketing para múltiplos clientes.
 
-O sistema lê uma lista de clientes, gera relatórios em PDF com métricas de performance e envia automaticamente os relatórios por email e WhatsApp.
+O sistema lê uma base de clientes, coleta métricas de campanhas, gera
+relatórios em PDF e envia automaticamente os resultados por email e
+WhatsApp.
 
-Este projeto demonstra conceitos de:
+Este projeto demonstra conceitos reais de engenharia de software
+aplicados a automação de marketing, incluindo integração com APIs,
+arquitetura modular e execução em nuvem.
 
-. automação de processos
+Principais conceitos aplicados
 
-. integração com APIs
+-   automação de processos
+-   integração com APIs externas
+-   geração automatizada de relatórios
+-   arquitetura modular em Python
+-   execução automatizada em cloud
 
-. geração de relatórios automatizados
+------------------------------------------------------------------------
 
-. arquitetura modular em Python
+Problema
 
-## Arquitetura do Sistema
+Agências de marketing frequentemente precisam gerar relatórios
+periódicos para dezenas de clientes.
 
-Fluxo geral do sistema:
+Esse processo normalmente envolve:
 
-```
+-   coletar métricas manualmente
+-   montar relatórios
+-   enviar por email
+-   comunicar resultados aos clientes
 
-clientes.csv
-      ↓
-carregamento de clientes
-      ↓
-data provider (fonte de métricas)
-      ↓
-geração de relatório PDF
-      ↓
-entrega automática
-   • email (SMTP)
-   • WhatsApp (Twilio API)
+Esse fluxo consome tempo operacional e dificulta escalar o atendimento.
 
-```
+------------------------------------------------------------------------
 
-O sistema suporta múltiplos clientes, permitindo escalar facilmente apenas adicionando novas linhas no CSV.
+Solução
 
-## Estrutura do Projeto
-
-```
-
-marketing-report-automation/
-│
-├── clientes.csv
-├── run.py
-├── requirements.txt
-├── .env.example
-│
-├── out/
-│
-└── src/
-    │
-    ├── config.py
-    ├── clients.py
-    │
-    ├── data_providers/
-    │     └── mock_provider.py
-    │
-    ├── report/
-    │     └── pdf_report.py
-    │
-    └── delivery/
-          ├── email_smtp.py
-          └── whatsapp_twilio.py
+Este projeto automatiza completamente esse processo.
 
 ```
 
-## Tecnologias Utilizadas
+Fluxo do sistema:
 
-Python
+    Google Sheets (lista de clientes)
+            ↓
+    Python Runner
+            ↓
+    Data Provider (fonte de métricas)
+            ↓
+    Geração de relatório em PDF
+            ↓
+    Entrega automática
+       • Email (Resend API)
+       • WhatsApp (Twilio API)
+            ↓
+    Execução automática via cron em cloud
 
-Pandas
+```
+O sistema suporta múltiplos clientes e pode escalar facilmente apenas adicionando novas linhas na planilha.
 
-ReportLab
+------------------------------------------------------------------------
 
-SMTP
+Arquitetura do Sistema
 
-Twilio API
+```
+Fluxo geral:
 
-Requests
+    Base de clientes (Google Sheets)
+            ↓
+    Carregamento de clientes
+            ↓
+    Data Provider (fonte de métricas)
+            ↓
+    Agregação de métricas
+            ↓
+    Geração de relatório PDF
+            ↓
+    Entrega automática
+       • Email (Resend API)
+       • WhatsApp (Twilio API)
 
-Python-dotenv
+```
+A arquitetura foi projetada para permitir substituição fácil da fonte de dados, como por exemplo integrar diretamente com a Google Ads API no futuro.
 
-## Funcionalidades
+------------------------------------------------------------------------
 
-✔ leitura de clientes via CSV
+Estrutura do Projeto
+
+```
+    marketing-report-automation/
+
+    ├── run.py
+    ├── requirements.txt
+    ├── runtime.txt
+    ├── .env.example
+    │
+    ├── out/
+    │
+    └── src/
+        ├── config.py
+        ├── clients_sheets.py
+        │
+        ├── data_providers/
+        │     ├── mock_provider.py
+        │     └── google_ads_provider.py
+        │
+        ├── report/
+        │     └── pdf_report.py
+        │
+        └── delivery/
+              ├── email_resend.py
+              └── whatsapp_twilio.py
+
+```
+
+------------------------------------------------------------------------
+
+Tecnologias Utilizadas
+
+-   Python
+-   Pandas
+-   ReportLab
+-   Requests
+-   Twilio API
+-   Resend Email API
+-   Google Sheets (CSV export)
+-   Python-dotenv
+-   Railway (deploy em cloud)
+
+------------------------------------------------------------------------
+
+Funcionalidades
+
+✔ leitura de clientes via Google Sheets
 ✔ geração automática de relatórios em PDF
 ✔ envio automático de relatórios por email
 ✔ envio automático de mensagens via WhatsApp
 ✔ suporte a múltiplos clientes
 ✔ arquitetura modular e escalável
+✔ execução automatizada em nuvem
 
-## Instalação
+------------------------------------------------------------------------
 
-Clone o repositório:
+Instalação
 
-```
+Clone o repositório
 
-git clone https://github.com/joaolpadua/marketing-report-automation
+    git clone https://github.com/joaolpadua/marketing-report-automation
 
-```
+Entre na pasta do projeto
 
-Entre na pasta do projeto:
+    cd marketing-report-automation
 
-```
+Crie o ambiente virtual
 
-cd marketing-report-automation
+    python -m venv .venv
 
-```
+Ative o ambiente virtual
 
-Crie o ambiente virtual:
+Windows
 
-```
+    .venv\Scripts\activate
 
-python -m venv .venv
+Linux / Mac
 
-```
+    source .venv/bin/activate
 
-Ative o ambiente virtual.
+Instale as dependências
 
-Windows:
+    pip install -r requirements.txt
 
-```
+------------------------------------------------------------------------
 
-.venv\Scripts\activate
+Configuração
 
-```
+Crie um arquivo .env baseado no exemplo
 
-Linux / Mac:
+    cp .env.example .env
 
-```
+Preencha com suas credenciais
 
-source .venv/bin/activate
+    REPORT_OUTPUT_DIR=./out
 
-```
+    CLIENTS_SHEET_URL=url_da_planilha_csv
 
-Instale as dependências:
+    RESEND_API_KEY=sua_api_key
 
-```
+    EMAIL_FROM_NAME=Relatórios
+    EMAIL_FROM=onboarding@resend.dev
 
-pip install -r requirements.txt
+    TWILIO_ACCOUNT_SID=seu_account_sid
+    TWILIO_AUTH_TOKEN=seu_auth_token
+    TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
 
-```
+------------------------------------------------------------------------
 
-## Configuração
+Base de Clientes
 
-Crie um arquivo .env baseado no exemplo:
+Clientes são definidos em uma planilha Google Sheets publicada como CSV.
 
-```
-cp .env.example .env
+Exemplo de estrutura:
 
-```
+    client_id,client_name,email,whatsapp_e164,active
+    1,Cliente A,email@empresa.com,5511999999999,TRUE
+    2,Cliente B,email@empresa.com,5511888888888,TRUE
 
-Preencha com suas credenciais:
+Para adicionar novos clientes basta inserir novas linhas na planilha.
 
-```
+------------------------------------------------------------------------
 
-REPORT_OUTPUT_DIR=./out
+Execução
 
-SMTP_HOST=smtp.gmail.com
-SMTP_PORT=587
-SMTP_USER=seu_email@gmail.com
-SMTP_PASS=sua_app_password
-EMAIL_FROM_NAME=Seu Nome
-EMAIL_FROM=seu_email@gmail.com
+Execute o script
 
-TWILIO_ACCOUNT_SID=seu_account_sid
-TWILIO_AUTH_TOKEN=seu_auth_token
-TWILIO_WHATSAPP_FROM=whatsapp:+14155238886
+    python run.py
 
-```
+O sistema irá automaticamente:
 
-## Base de Clientes
+1.  carregar clientes da planilha
+2.  coletar métricas
+3.  gerar relatórios em PDF
+4.  enviar relatórios por email
+5.  enviar resumo via WhatsApp
 
-Clientes são definidos no arquivo:
+------------------------------------------------------------------------
 
-```
+Exemplo de Saída
 
-clientes.csv
+    === Processando cliente: Cliente A ===
+    PDF gerado em: ./out/relatorio_1_Últimos 30 dias.pdf
+    Email enviado com sucesso
+    WhatsApp enviado com sucesso
 
-```
+    === Processando cliente: Cliente B ===
+    PDF gerado em: ./out/relatorio_2_Últimos 30 dias.pdf
+    Email enviado com sucesso
+    WhatsApp enviado com sucesso
 
-Exemplo:
+------------------------------------------------------------------------
 
-```
-client_id,client_name,email,whatsapp_e164
-1,Cliente A,email@empresa.com,5511999999999
-2,Cliente B,email@empresa.com,5511888888888
+Execução Automática
 
-```
+O projeto pode ser executado automaticamente em cloud usando cron jobs.
 
-Para adicionar novos clientes basta inserir novas linhas no CSV.
+Exemplo de agendamento semanal:
 
-## Execução
+    0 8 * * 1
 
-Execute o script:
+segunda-feira às 08:00
 
-```
+------------------------------------------------------------------------
 
-python run.py
+Possíveis Evoluções
 
-```
+-   integração direta com Google Ads API
+-   integração com Google Analytics GA4
+-   geração de gráficos no relatório
+-   armazenamento histórico de métricas
+-   dashboard analítico
+-   paralelização para centenas de clientes
+-   containerização com Docker
 
-O sistema irá:
+------------------------------------------------------------------------
 
-1 carregar clientes
-
-2 gerar relatórios em PDF
-
-3 enviar email
-
-4 enviar mensagens via WhatsApp
-
-## Exemplo de Saída
-
-```
-
-=== Processando cliente: Cliente A ===
-PDF gerado em: ./out/relatorio_1_03-2026.pdf
-Email enviado com sucesso
-WhatsApp enviado com sucesso
-
-=== Processando cliente: Cliente B ===
-PDF gerado em: ./out/relatorio_2_03-2026.pdf
-Email enviado com sucesso
-WhatsApp enviado com sucesso
-
-```
-
-## Possíveis Evoluções
-
-O projeto foi desenvolvido para ser facilmente expandido.
-
-Possíveis evoluções incluem:
-
-. integração com Google Ads API
-. integração com Google Analytics GA4
-. geração de gráficos no relatório
-. armazenamento histórico de métricas
-. dashboard analítico
-. execução agendada automática
-. deploy em Docker
-
-## Objetivo do Projeto
+Objetivo do Projeto
 
 Este projeto foi desenvolvido como demonstração prática de:
 
-. automação de processos
-. integração com APIs externas
-. geração automatizada de relatórios
-. arquitetura modular em Python
-. pipelines simples de automação de dados
+-   automação de processos
+-   integração com APIs externas
+-   geração automatizada de relatórios
+-   arquitetura modular em Python
+-   pipelines simples de automação de dados
+-   deploy e execução automatizada em cloud
