@@ -42,7 +42,7 @@ def aggregate_metrics(campaign_data):
 # serviço de email (SMTP, Sendgrid, AWS SES, etc).
 # -------------------------------------------------------------------------
 def send_email(client, metrics, pdf_path, settings):
-
+    
     try:
 
         send_email_with_attachment(
