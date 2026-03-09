@@ -5,11 +5,14 @@ from src.report.pdf_report import build_pdf_report
 from src.delivery.email_resend import send_email_with_attachment
 from src.delivery.whatsapp_twilio import send_whatsapp_message_with_media
 
+import datetime
+
 
 # -------------------------------------------------------------------------
 # Agrega métricas de múltiplas campanhas em um único resumo.
-# Isso simula o que muitas ferramentas de marketing fazem ao consolidar
-# resultados de campanhas para gerar um relatório geral do cliente.
+#
+# Esse processo simula o comportamento de ferramentas de marketing
+# que consolidam diversas campanhas em um relatório único do cliente.
 # -------------------------------------------------------------------------
 def aggregate_metrics(campaign_data):
 
@@ -18,11 +21,10 @@ def aggregate_metrics(campaign_data):
     cost = sum(c["cost"] for c in campaign_data)
     conversions = sum(c["conversions"] for c in campaign_data)
 
-    # cálculo de métricas derivadas
+    # métricas derivadas
     ctr = (clicks / impressions * 100) if impressions else 0
     cpc = (cost / clicks) if clicks else 0
     cpa = (cost / conversions) if conversions else 0
-
 
     return {
         "period_label": "Últimos 30 dias",
@@ -37,12 +39,13 @@ def aggregate_metrics(campaign_data):
 
 
 # -------------------------------------------------------------------------
-# Responsável apenas pelo envio do relatório por email.
-# Isolamos essa função para facilitar manutenção e troca futura de
-# serviço de email (SMTP, Sendgrid, AWS SES, etc).
-# ------------------------------------------------------------------------
+# Envio do relatório por email.
+#
+# A lógica fica isolada para facilitar troca futura de provedor
+# (Resend, Sendgrid, SES, SMTP, etc).
+# -------------------------------------------------------------------------
 def send_email(client, metrics, pdf_path, settings):
-    
+
     try:
 
         send_email_with_attachment(
@@ -59,12 +62,9 @@ def send_email(client, metrics, pdf_path, settings):
         print(f"Falha no envio de email ❌ -> {exc}")
 
 
-# -----------------------------------------------------------------------
-# Responsável pelo envio da notificação via WhatsApp.
-# Mantido separado para facilitar inclusão de novos canais no futuro
-# (Slack, Telegram, etc).
-# ------------------------------------------------------------------------
-
+# -------------------------------------------------------------------------
+# Monta mensagem resumida para envio via WhatsApp.
+# -------------------------------------------------------------------------
 def build_whatsapp_summary(client, metrics):
 
     return (
@@ -81,6 +81,12 @@ def build_whatsapp_summary(client, metrics):
     )
 
 
+# -------------------------------------------------------------------------
+# Envio de notificação via WhatsApp.
+#
+# Mantido separado para permitir adicionar outros canais no futuro
+# (Slack, Telegram, SMS, etc).
+# -------------------------------------------------------------------------
 def send_whatsapp(client, metrics, settings):
 
     try:
@@ -90,7 +96,8 @@ def send_whatsapp(client, metrics, settings):
             auth_token=settings.twilio_auth_token,
             from_whatsapp=settings.twilio_whatsapp_from,
             to_whatsapp=client["whatsapp_e164"],
-            message = build_whatsapp_summary(client, metrics),            media_url=None,
+            message=build_whatsapp_summary(client, metrics),
+            media_url=None,
         )
 
         print("WhatsApp enviado com sucesso ✅")
@@ -101,7 +108,8 @@ def send_whatsapp(client, metrics, settings):
 
 # -------------------------------------------------------------------------
 # Pipeline de processamento para um único cliente.
-# Aqui acontece o fluxo principal:
+#
+# Fluxo:
 #
 # cliente
 # ↓
@@ -109,7 +117,7 @@ def send_whatsapp(client, metrics, settings):
 # ↓
 # consolidar métricas
 # ↓
-# gerar relatório
+# gerar relatório PDF
 # ↓
 # enviar notificações
 # -------------------------------------------------------------------------
@@ -117,13 +125,13 @@ def process_client(client, provider, settings):
 
     print(f"\n=== Processando cliente: {client['client_name']} ===")
 
-    # 1. buscar dados de campanhas (simulando Google Ads)
+    # 1. buscar dados de campanhas (mock do Google Ads)
     campaign_data = provider.get_campaign_data(client)
 
-    # 2. consolidar métricas em um resumo geral
+    # 2. consolidar métricas
     metrics = aggregate_metrics(campaign_data)
 
-    # 3. gerar relatório em PDF
+    # 3. gerar relatório PDF
     pdf_path = build_pdf_report(
         client=client,
         metrics=metrics,
@@ -132,33 +140,57 @@ def process_client(client, provider, settings):
 
     print(f"PDF gerado em: {pdf_path}")
 
-    # 4. enviar relatório por email
+    # 4. envio por email
     send_email(client, metrics, pdf_path, settings)
 
-    # 5. enviar notificação por WhatsApp
+    # 5. envio de notificação WhatsApp
     send_whatsapp(client, metrics, settings)
 
 
 # -------------------------------------------------------------------------
 # Ponto de entrada da aplicação.
-# Responsável apenas por inicializar dependências e iniciar o pipeline.
+#
+# Responsável por:
+# - carregar configurações
+# - carregar clientes
+# - iniciar provider de dados
+# - executar pipeline
 # -------------------------------------------------------------------------
 def main():
+
+    start = datetime.datetime.utcnow()
+
+    print("===================================")
+    print("JOB AUTOMÁTICO DE RELATÓRIO")
+    print("Início:", start)
+    print("===================================")
 
     # carregar configurações do .env
     settings = Settings.load()
 
-    # carregar clientes do sheets
+    # carregar clientes da planilha
     clients = load_clients_from_sheets(settings.clients_sheet_url)
+
+    print(f"{len(clients)} clientes encontrados")
 
     # inicializar provider de dados (mock por enquanto)
     provider = MockProvider()
 
-    # processar cada cliente individualmente
+    # executar pipeline para cada cliente
     for client in clients:
         process_client(client, provider, settings)
 
+    end = datetime.datetime.utcnow()
 
-# execução direta do script
+    print("===================================")
+    print("JOB FINALIZADO")
+    print("Fim:", end)
+    print("Duração:", end - start)
+    print("===================================")
+
+
+# -------------------------------------------------------------------------
+# Execução direta do script
+# -------------------------------------------------------------------------
 if __name__ == "__main__":
     main()
