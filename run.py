@@ -1,196 +1,130 @@
+"""
+run.py
+
+Ponto de entrada do sistema de automação de relatórios.
+
+Este arquivo NÃO contém lógica de negócio.
+Ele apenas orquestra o pipeline do sistema.
+
+Pipeline:
+
+carregar clientes
+↓
+buscar dados de campanhas
+↓
+calcular métricas
+↓
+gerar insights
+↓
+formatar relatório
+↓
+enviar WhatsApp
+"""
+
 from src.config import Settings
 from src.clients_sheets import load_clients_from_sheets
 from src.data_providers.mock_provider import MockProvider
-from src.report.pdf_report import build_pdf_report
-from src.delivery.email_resend import send_email_with_attachment
+
+from src.report.metrics import aggregate_metrics
+from src.report.insights import generate_insights
+from src.report.formatter import build_whatsapp_report
+
 from src.delivery.whatsapp_twilio import send_whatsapp_message_with_media
 
+from src.utils.validation import validate_client
+
+import logging
 import datetime
 
 
 # -------------------------------------------------------------------------
-# Agrega métricas de múltiplas campanhas em um único resumo.
-#
-# Esse processo simula o comportamento de ferramentas de marketing
-# que consolidam diversas campanhas em um relatório único do cliente.
+# Configuração global de logs
 # -------------------------------------------------------------------------
-def aggregate_metrics(campaign_data):
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s | %(levelname)s | %(message)s"
+)
 
-    impressions = sum(c["impressions"] for c in campaign_data)
-    clicks = sum(c["clicks"] for c in campaign_data)
-    cost = sum(c["cost"] for c in campaign_data)
-    conversions = sum(c["conversions"] for c in campaign_data)
-
-    # métricas derivadas
-    ctr = (clicks / impressions * 100) if impressions else 0
-    cpc = (cost / clicks) if clicks else 0
-    cpa = (cost / conversions) if conversions else 0
-
-    return {
-        "period_label": "Últimos 30 dias",
-        "impressions": impressions,
-        "clicks": clicks,
-        "cost_brl": round(cost, 2),
-        "conversions": conversions,
-        "ctr": round(ctr, 2),
-        "cpc": round(cpc, 2),
-        "cpa_brl": round(cpa, 2),
-    }
+logger = logging.getLogger(__name__)
 
 
 # -------------------------------------------------------------------------
-# Envio do relatório por email.
-#
-# A lógica fica isolada para facilitar troca futura de provedor
-# (Resend, Sendgrid, SES, SMTP, etc).
-# -------------------------------------------------------------------------
-def send_email(client, metrics, pdf_path, settings):
-
-    try:
-
-        send_email_with_attachment(
-            api_key=settings.resend_api_key,
-            from_email=settings.email_from,
-            to_email=client["email"],
-            subject=f"Relatório de Marketing - {metrics['period_label']}",
-            body=f"Olá {client['client_name']}, seu relatório está pronto.",
-        )
-
-        print("Email enviado com sucesso ✅")
-
-    except Exception as exc:
-        print(f"Falha no envio de email ❌ -> {exc}")
-
-
-# -------------------------------------------------------------------------
-# Monta mensagem resumida para envio via WhatsApp.
-# -------------------------------------------------------------------------
-def build_whatsapp_summary(client, metrics):
-
-    return (
-        f"📊 Relatório de Marketing\n\n"
-        f"Cliente: {client['client_name']}\n"
-        f"Período: {metrics['period_label']}\n\n"
-        f"Cliques: {metrics['clicks']}\n"
-        f"Impressões: {metrics['impressions']}\n"
-        f"CTR: {metrics['ctr']}%\n"
-        f"Custo: R$ {metrics['cost_brl']}\n"
-        f"Conversões: {metrics['conversions']}\n"
-        f"CPA: R$ {metrics['cpa_brl']}\n\n"
-        f"📩 O relatório completo foi enviado por email."
-    )
-
-
-# -------------------------------------------------------------------------
-# Envio de notificação via WhatsApp.
-#
-# Mantido separado para permitir adicionar outros canais no futuro
-# (Slack, Telegram, SMS, etc).
-# -------------------------------------------------------------------------
-def send_whatsapp(client, metrics, settings):
-
-    try:
-
-        send_whatsapp_message_with_media(
-            account_sid=settings.twilio_account_sid,
-            auth_token=settings.twilio_auth_token,
-            from_whatsapp=settings.twilio_whatsapp_from,
-            to_whatsapp=client["whatsapp_e164"],
-            message=build_whatsapp_summary(client, metrics),
-            media_url=None,
-        )
-
-        print("WhatsApp enviado com sucesso ✅")
-
-    except Exception as exc:
-        print(f"Erro envio WhatsApp ❌ -> {exc}")
-
-
-# -------------------------------------------------------------------------
-# Pipeline de processamento para um único cliente.
-#
-# Fluxo:
-#
-# cliente
-# ↓
-# buscar dados de campanhas
-# ↓
-# consolidar métricas
-# ↓
-# gerar relatório PDF
-# ↓
-# enviar notificações
+# Pipeline de processamento de um cliente
 # -------------------------------------------------------------------------
 def process_client(client, provider, settings):
 
-    print(f"\n=== Processando cliente: {client['client_name']} ===")
+    logger.info(f"Processando cliente: {client['client_name']}")
 
-    # 1. buscar dados de campanhas (mock do Google Ads)
+    # validação de dados do cliente
+    validate_client(client)
+
+    # buscar dados das campanhas
     campaign_data = provider.get_campaign_data(client)
 
-    # 2. consolidar métricas
+    # calcular métricas consolidadas
     metrics = aggregate_metrics(campaign_data)
 
-    # 3. gerar relatório PDF
-    pdf_path = build_pdf_report(
-        client=client,
-        metrics=metrics,
-        output_dir=settings.report_output_dir,
+    # gerar insights automáticos
+    insights = generate_insights(metrics)
+
+    # gerar mensagem final
+    message = build_whatsapp_report(client, metrics, insights)
+
+    # enviar mensagem
+    send_whatsapp_message_with_media(
+        account_sid=settings.twilio_account_sid,
+        auth_token=settings.twilio_auth_token,
+        from_whatsapp=settings.twilio_whatsapp_from,
+        to_whatsapp=client["whatsapp_e164"],
+        message=message,
+        media_url=None,
     )
 
-    print(f"PDF gerado em: {pdf_path}")
-
-    # 4. envio por email
-    send_email(client, metrics, pdf_path, settings)
-
-    # 5. envio de notificação WhatsApp
-    send_whatsapp(client, metrics, settings)
+    logger.info(f"WhatsApp enviado para {client['client_name']}")
 
 
 # -------------------------------------------------------------------------
-# Ponto de entrada da aplicação.
-#
-# Responsável por:
-# - carregar configurações
-# - carregar clientes
-# - iniciar provider de dados
-# - executar pipeline
+# Função principal do job
 # -------------------------------------------------------------------------
 def main():
 
-    start = datetime.datetime.utcnow()
+    start_time = datetime.datetime.utcnow()
 
-    print("===================================")
-    print("JOB AUTOMÁTICO DE RELATÓRIO")
-    print("Início:", start)
-    print("===================================")
+    logger.info("===================================")
+    logger.info("JOB AUTOMÁTICO DE RELATÓRIO INICIADO")
+    logger.info(f"Início: {start_time}")
+    logger.info("===================================")
 
-    # carregar configurações do .env
     settings = Settings.load()
 
     # carregar clientes da planilha
     clients = load_clients_from_sheets(settings.clients_sheet_url)
 
-    print(f"{len(clients)} clientes encontrados")
+    logger.info(f"{len(clients)} clientes encontrados")
 
-    # inicializar provider de dados (mock por enquanto)
+    # provider de dados
     provider = MockProvider()
 
-    # executar pipeline para cada cliente
+    # processar clientes
     for client in clients:
-        process_client(client, provider, settings)
 
-    end = datetime.datetime.utcnow()
+        try:
+            process_client(client, provider, settings)
 
-    print("===================================")
-    print("JOB FINALIZADO")
-    print("Fim:", end)
-    print("Duração:", end - start)
-    print("===================================")
+        except Exception:
+            logger.exception(f"Erro no cliente {client.get('client_name','desconhecido')}")
+
+    end_time = datetime.datetime.utcnow()
+
+    logger.info("===================================")
+    logger.info("JOB FINALIZADO")
+    logger.info(f"Fim: {end_time}")
+    logger.info(f"Duração: {end_time - start_time}")
+    logger.info("===================================")
 
 
 # -------------------------------------------------------------------------
-# Execução direta do script
+# Execução direta
 # -------------------------------------------------------------------------
 if __name__ == "__main__":
     main()
