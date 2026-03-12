@@ -1,53 +1,35 @@
 """
 run.py
 
-Ponto de entrada da automação de relatórios de marketing.
+Script principal do job automático de relatórios.
 
-Este script é responsável apenas por orquestrar o pipeline do sistema.
-Ele não contém lógica de negócio complexa.
+Responsável por:
 
-Fluxo do sistema:
-
-1) carregar configurações
-2) carregar clientes
-3) buscar dados de campanhas
-4) calcular métricas
-5) gerar insights
-6) montar relatório
-7) enviar WhatsApp
-
-O script é executado automaticamente via cron no Railway.
+1) Carregar configurações
+2) Carregar lista de clientes
+3) Buscar dados de campanhas
+4) Agregar métricas
+5) Comparar períodos
+6) Gerar insights
+7) Enviar relatório via WhatsApp
 """
 
-# ---------------------------------------------------------------------
-# Imports do projeto
-# ---------------------------------------------------------------------
+import datetime
+import logging
 
 from src.config import Settings
 from src.clients_sheets import load_clients_from_sheets
-
 from src.data_providers.mock_provider import MockProvider
-
 from src.report.metrics import aggregate_metrics
+from src.report.comparison import compare_metrics
 from src.report.insights import generate_insights
-from src.report.formatter import build_whatsapp_report
-
 from src.delivery.whatsapp_twilio import send_whatsapp_message_with_media
-
 from src.utils.validation import validate_client
 
 
-# ---------------------------------------------------------------------
-# Imports padrão Python
-# ---------------------------------------------------------------------
-
-import logging
-import datetime
-
-
-# ---------------------------------------------------------------------
-# Configuração global de logs
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------
+# Configuração básica de logging
+# ---------------------------------------------------------
 
 logging.basicConfig(
     level=logging.INFO,
@@ -57,61 +39,113 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------------------
-# Pipeline de processamento de um cliente
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------
+# Monta mensagem final enviada ao cliente
+# ---------------------------------------------------------
+
+def build_whatsapp_summary(client, metrics, comparison, insights):
+    """
+    Constrói o texto final enviado ao cliente.
+    """
+
+    message = (
+        f"📊 Relatório de Marketing\n\n"
+        f"Cliente: {client['client_name']}\n"
+        f"Período: Últimos 30 dias\n\n"
+
+        f"Cliques: {metrics['clicks']} ({comparison['clicks_change']}%)\n"
+        f"Impressões: {metrics['impressions']} ({comparison['impressions_change']}%)\n"
+        f"CTR: {metrics['ctr']}%\n"
+        f"Custo: R$ {metrics['cost_brl']}\n"
+        f"Conversões: {metrics['conversions']} ({comparison['conversions_change']}%)\n"
+        f"CPA: R$ {metrics['cpa_brl']} ({comparison['cpa_change']}%)\n"
+    )
+
+    if insights:
+        message += "\n💡 Insights\n"
+
+        for insight in insights:
+            message += f"* {insight}\n"
+
+    return message
+
+
+# ---------------------------------------------------------
+# Envia mensagem WhatsApp
+# ---------------------------------------------------------
+
+def send_whatsapp(client, message, settings):
+    """
+    Envia mensagem para o cliente via Twilio WhatsApp.
+    """
+
+    try:
+
+        send_whatsapp_message_with_media(
+            account_sid=settings.twilio_account_sid,
+            auth_token=settings.twilio_auth_token,
+            from_whatsapp=settings.twilio_whatsapp_from,
+            to_whatsapp=client["whatsapp_e164"],
+            message=message,
+            media_url=None
+        )
+
+        logger.info(f"WhatsApp enviado para {client['client_name']}")
+
+    except Exception as exc:
+
+        logger.exception(
+            f"Erro ao enviar WhatsApp para {client['client_name']} -> {exc}"
+        )
+
+
+# ---------------------------------------------------------
+# Pipeline completo para um cliente
+# ---------------------------------------------------------
 
 def process_client(client, provider, settings):
     """
-    Processa um cliente individual.
-
-    Passos:
-    1. validar dados do cliente
-    2. buscar dados de campanhas
-    3. calcular métricas
-    4. gerar insights
-    5. montar relatório
-    6. enviar mensagem
+    Processa todo o fluxo de relatório para um único cliente.
     """
 
     logger.info(f"Processando cliente: {client['client_name']}")
 
-    # validação básica do cliente
+    # valida dados mínimos do cliente
     validate_client(client)
 
-    # buscar dados das campanhas (Mock ou Google Ads futuramente)
-    campaign_data = provider.get_campaign_data(client)
+    # buscar dados de campanhas
+    data = provider.get_campaign_data(client)
 
-    # calcular métricas agregadas
-    metrics = aggregate_metrics(campaign_data)
+    current_data = data["current"]
+    previous_data = data["previous"]
+
+    # calcular métricas
+    metrics_current = aggregate_metrics(current_data)
+    metrics_previous = aggregate_metrics(previous_data)
+
+    # comparar períodos
+    comparison = compare_metrics(metrics_current, metrics_previous)
 
     # gerar insights automáticos
-    insights = generate_insights(metrics)
+    insights = generate_insights(metrics_current, comparison)
 
     # montar mensagem final
-    message = build_whatsapp_report(client, metrics, insights)
-
-    # enviar mensagem via WhatsApp
-    send_whatsapp_message_with_media(
-        account_sid=settings.twilio_account_sid,
-        auth_token=settings.twilio_auth_token,
-        from_whatsapp=settings.twilio_whatsapp_from,
-        to_whatsapp=client["whatsapp_e164"],
-        message=message,
-        media_url=None,
+    message = build_whatsapp_summary(
+        client,
+        metrics_current,
+        comparison,
+        insights
     )
 
-    logger.info(f"WhatsApp enviado para {client['client_name']}")
+    # enviar relatório
+    send_whatsapp(client, message, settings)
 
 
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------
 # Função principal do job
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------
 
 def main():
-    """
-    Executa o job completo de envio de relatórios.
-    """
 
     start_time = datetime.datetime.utcnow()
 
@@ -120,28 +154,28 @@ def main():
     logger.info(f"Início: {start_time}")
     logger.info("===================================")
 
-    # carregar configurações do sistema
+    # carregar configurações
     settings = Settings.load()
 
-    # carregar clientes da planilha
+    # carregar clientes
     clients = load_clients_from_sheets(settings.clients_sheet_url)
 
     logger.info(f"{len(clients)} clientes encontrados")
 
-    # inicializar provider de dados
-    # (mock por enquanto, Google Ads no futuro)
+    # inicializar provider
     provider = MockProvider()
 
-    # processar cada cliente
+    # processar clientes
     for client in clients:
 
         try:
+
             process_client(client, provider, settings)
 
-        except Exception:
-            # garante que erro em um cliente não interrompa o job
+        except Exception as exc:
+
             logger.exception(
-                f"Erro no cliente {client.get('client_name', 'desconhecido')}"
+                f"Erro no cliente {client.get('client_name')} -> {exc}"
             )
 
     end_time = datetime.datetime.utcnow()
@@ -153,9 +187,9 @@ def main():
     logger.info("===================================")
 
 
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------
 # Execução direta do script
-# ---------------------------------------------------------------------
+# ---------------------------------------------------------
 
 if __name__ == "__main__":
     main()

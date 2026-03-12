@@ -3,7 +3,10 @@ import random
 
 class MockProvider:
 
-    def get_campaign_data(self, client):
+    def generate_campaigns(self):
+        """
+        Gera campanhas simuladas para um período.
+        """
 
         campaigns = [
             "Search Brand",
@@ -29,3 +32,18 @@ class MockProvider:
             })
 
         return results
+
+
+    def get_campaign_data(self, client):
+        """
+        Retorna dados simulados para dois períodos:
+        semana atual e semana anterior.
+        """
+
+        current_data = self.generate_campaigns()
+        previous_data = self.generate_campaigns()
+
+        return {
+            "current": current_data,
+            "previous": previous_data
+        }
