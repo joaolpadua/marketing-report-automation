@@ -2,38 +2,52 @@
 comparison.py
 
 Responsável por comparar métricas entre dois períodos
-e calcular a variação percentual.
+(ex: semana atual vs semana anterior).
 """
 
 
-def calculate_change(current, previous):
+def percentage_change(current, previous):
     """
     Calcula variação percentual entre dois valores.
+    Protege contra divisão por zero.
     """
 
     if previous == 0:
         return 0
 
-    change = ((current - previous) / previous) * 100
-    return round(change, 2)
+    return round(((current - previous) / previous) * 100, 2)
 
 
-def compare_metrics(current_metrics, previous_metrics):
+def compare_metrics(current, previous):
     """
-    Recebe métricas atuais e anteriores e retorna variações.
+    Compara dois conjuntos de métricas e retorna as variações.
     """
 
     return {
-        "clicks_change": calculate_change(
-            current_metrics["clicks"], previous_metrics["clicks"]
+
+        "clicks_change": percentage_change(
+            current["clicks"],
+            previous["clicks"]
         ),
-        "impressions_change": calculate_change(
-            current_metrics["impressions"], previous_metrics["impressions"]
+
+        "impressions_change": percentage_change(
+            current["impressions"],
+            previous["impressions"]
         ),
-        "conversions_change": calculate_change(
-            current_metrics["conversions"], previous_metrics["conversions"]
+
+        "conversions_change": percentage_change(
+            current["conversions"],
+            previous["conversions"]
         ),
-        "cpa_change": calculate_change(
-            current_metrics["cpa_brl"], previous_metrics["cpa_brl"]
+
+        "ctr_change": percentage_change(
+            current["ctr"],
+            previous["ctr"]
         ),
+
+        "cpa_change": percentage_change(
+            current["cpa_brl"],
+            previous["cpa_brl"]
+        )
+
     }
