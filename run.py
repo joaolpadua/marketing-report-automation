@@ -36,7 +36,7 @@ from src.utils.validation import validate_client
 from src.storage.report_store import save_report
 from src.utils.run_context import generate_run_id
 from src.reporting.report_builder import build_report
-
+from src.data_providers.google_ads_mcc_provider import GoogleAdsMCCProvider
 # ---------------------------------------------------------
 # Configuração básica de logging
 # ---------------------------------------------------------
@@ -183,13 +183,19 @@ def main():
     # carregar configurações
     settings = Settings.load()
 
+    print("USE_MOCK_DATA =", settings.use_mock_data)
     # carregar clientes
     clients = load_clients_from_sheets(settings.clients_sheet_url)
 
     logger.info(f"{len(clients)} clientes encontrados")
 
     # provider de dados
-    provider = MockProvider()
+    if settings.use_mock_data:
+        logger.info("Provider selecionado: MockProvider")
+        provider = MockProvider()
+    else:
+        logger.info("Provider selecionado: GoogleAdsMCCProvider")
+        provider = GoogleAdsMCCProvider(settings)
 
     # métricas de execução
     success_count = 0

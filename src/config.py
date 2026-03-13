@@ -54,6 +54,9 @@ class Settings:
         google_ads_client_secret,
         google_ads_refresh_token,
         google_ads_login_customer_id,
+
+        # flag para usar dados mockados (desenvolvimento e testes)  
+        use_mock_data,
     ):
 
         # -----------------------------------------
@@ -100,7 +103,11 @@ class Settings:
         self.google_ads_client_secret = google_ads_client_secret
         self.google_ads_refresh_token = google_ads_refresh_token
         self.google_ads_login_customer_id = google_ads_login_customer_id
-
+        
+        # -----------------------------------------
+        # flag para usar dados mockados (desenvolvimento e testes)
+        # -----------------------------------------
+        self.use_mock_data = use_mock_data
 
     @staticmethod
     def load() -> "Settings":
@@ -163,4 +170,10 @@ class Settings:
             google_ads_client_secret=os.getenv("GOOGLE_ADS_CLIENT_SECRET"),
             google_ads_refresh_token=os.getenv("GOOGLE_ADS_REFRESH_TOKEN"),
             google_ads_login_customer_id=os.getenv("GOOGLE_ADS_LOGIN_CUSTOMER_ID"),
+
+            #   -----------------------------------------
+            # flag para usar dados mockados (desenvolvimento e testes)
+            #   -----------------------------------------
+            use_mock_data=os.getenv("USE_MOCK_DATA", "true").lower() == "true",
+
         )
