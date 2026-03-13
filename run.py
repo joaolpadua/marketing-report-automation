@@ -1,7 +1,5 @@
 """
-run.py
-
-Script principal do job automático de relatórios.
+Script principal do job automático de relatórios de marketing.
 
 Responsável por:
 
@@ -11,11 +9,21 @@ Responsável por:
 4) Agregar métricas
 5) Comparar períodos
 6) Gerar insights
-7) Enviar relatório via WhatsApp
+7) Montar relatório
+8) Enviar relatório via WhatsApp
+9) Salvar relatório localmente
+10) Registrar métricas de execução do job
+
+Possui também modo seguro de execução:
+
+python run.py --dry-run
+
+Nesse modo o pipeline roda inteiro, mas o WhatsApp NÃO é enviado.
 """
 
 import datetime
 import logging
+import argparse
 
 from src.config import Settings
 from src.clients_sheets import load_clients_from_sheets
@@ -25,6 +33,8 @@ from src.report.comparison import compare_metrics
 from src.report.insights import generate_insights
 from src.delivery.whatsapp_twilio import send_whatsapp_message_with_media
 from src.utils.validation import validate_client
+from src.storage.report_store import save_report
+from src.utils.run_context import generate_run_id
 
 
 # ---------------------------------------------------------
@@ -103,9 +113,9 @@ def send_whatsapp(client, message, settings):
 # Pipeline completo para um cliente
 # ---------------------------------------------------------
 
-def process_client(client, provider, settings):
+def process_client(client, provider, settings, run_id, dry_run):
     """
-    Processa todo o fluxo de relatório para um único cliente.
+    Executa todo o pipeline de geração de relatório para um cliente.
     """
 
     logger.info(f"Processando cliente: {client['client_name']}")
@@ -119,17 +129,17 @@ def process_client(client, provider, settings):
     current_data = data["current"]
     previous_data = data["previous"]
 
-    # calcular métricas
+    # cálculo de métricas
     metrics_current = aggregate_metrics(current_data)
     metrics_previous = aggregate_metrics(previous_data)
 
-    # comparar períodos
+    # comparação entre períodos
     comparison = compare_metrics(metrics_current, metrics_previous)
 
-    # gerar insights automáticos
+    # geração de insights
     insights = generate_insights(metrics_current, comparison)
 
-    # montar mensagem final
+    # construção da mensagem final
     message = build_whatsapp_summary(
         client,
         metrics_current,
@@ -137,8 +147,25 @@ def process_client(client, provider, settings):
         insights
     )
 
-    # enviar relatório
-    send_whatsapp(client, message, settings)
+    # -----------------------------------------------------
+    # envio WhatsApp (bloqueado no modo dry-run)
+    # -----------------------------------------------------
+
+    if dry_run:
+
+        logger.info(
+            f"[DRY RUN] WhatsApp NÃO enviado para {client['client_name']}"
+        )
+
+    else:
+
+        send_whatsapp(client, message, settings)
+
+    # -----------------------------------------------------
+    # persistência do relatório
+    # -----------------------------------------------------
+
+    save_report(run_id, client["client_name"], message)
 
 
 # ---------------------------------------------------------
@@ -147,7 +174,34 @@ def process_client(client, provider, settings):
 
 def main():
 
+    # -----------------------------------------------------
+    # leitura de argumentos CLI
+    # -----------------------------------------------------
+
+    parser = argparse.ArgumentParser()
+
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Executa pipeline sem enviar WhatsApp"
+    )
+
+    args = parser.parse_args()
+
+    dry_run = args.dry_run
+
+    # -----------------------------------------------------
+    # início do job
+    # -----------------------------------------------------
+
     start_time = datetime.datetime.utcnow()
+
+    run_id = generate_run_id()
+
+    logger.info(f"RUN ID: {run_id}")
+
+    if dry_run:
+        logger.info("MODO DRY RUN ATIVADO")
 
     logger.info("===================================")
     logger.info("JOB AUTOMÁTICO DE RELATÓRIO INICIADO")
@@ -162,33 +216,67 @@ def main():
 
     logger.info(f"{len(clients)} clientes encontrados")
 
-    # inicializar provider
+    # provider de dados
     provider = MockProvider()
 
-    # processar clientes
+    # métricas de execução
+    success_count = 0
+    error_count = 0
+
+    # -----------------------------------------------------
+    # loop principal
+    # -----------------------------------------------------
+
     for client in clients:
 
         try:
 
-            process_client(client, provider, settings)
+            process_client(
+                client,
+                provider,
+                settings,
+                run_id,
+                dry_run
+            )
+
+            success_count += 1
 
         except Exception as exc:
+
+            error_count += 1
 
             logger.exception(
                 f"Erro no cliente {client.get('client_name')} -> {exc}"
             )
 
+    # -----------------------------------------------------
+    # finalização do job
+    # -----------------------------------------------------
+
     end_time = datetime.datetime.utcnow()
+
+    total = success_count + error_count
 
     logger.info("===================================")
     logger.info("JOB FINALIZADO")
     logger.info(f"Fim: {end_time}")
-    logger.info(f"Duração: {end_time - start_time}")
+    logger.info(f"Duração total: {end_time - start_time}")
+
+    logger.info(f"Clientes processados: {total}")
+    logger.info(f"Sucesso: {success_count}")
+    logger.info(f"Falhas: {error_count}")
+
+    if total > 0:
+
+        avg = (end_time - start_time).total_seconds() / total
+
+        logger.info(f"Tempo médio por cliente: {round(avg, 2)}s")
+
     logger.info("===================================")
 
 
 # ---------------------------------------------------------
-# Execução direta do script
+# execução direta
 # ---------------------------------------------------------
 
 if __name__ == "__main__":

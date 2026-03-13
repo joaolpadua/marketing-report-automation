@@ -58,12 +58,16 @@ def generate_insights(metrics, comparison):
 
     if metrics["cpa_brl"] < 20:
         insights.append(
-            "Custo por aquisição está eficiente."
+            "CPA está eficiente, indicando bom custo por aquisição."
         )
 
-    if metrics["cpa_brl"] > 50:
+    if comparison["cpa_change"] < -10:
         insights.append(
-            "CPA está alto. Pode ser interessante revisar a estratégia de conversão."
+            "CPA melhorou em relação ao período anterior."
         )
 
+    if comparison["cpa_change"] > 10:
+        insights.append(
+            "CPA piorou em relação ao período anterior."
+        )
     return insights

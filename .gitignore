@@ -14,6 +14,7 @@ clientes.csv
 # Arquivos gerados
 out/
 logs/
+reports/
 
 # Sistema
 .DS_Store
