@@ -35,7 +35,7 @@ from src.delivery.whatsapp_twilio import send_whatsapp_message_with_media
 from src.utils.validation import validate_client
 from src.storage.report_store import save_report
 from src.utils.run_context import generate_run_id
-
+from src.reporting.report_builder import build_report
 
 # ---------------------------------------------------------
 # Configuração básica de logging
@@ -49,35 +49,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 
-# ---------------------------------------------------------
-# Monta mensagem final enviada ao cliente
-# ---------------------------------------------------------
 
-def build_whatsapp_summary(client, metrics, comparison, insights):
-    """
-    Constrói o texto final enviado ao cliente.
-    """
-
-    message = (
-        f"📊 Relatório de Marketing\n\n"
-        f"Cliente: {client['client_name']}\n"
-        f"Período: Últimos 30 dias\n\n"
-
-        f"Cliques: {metrics['clicks']} ({comparison['clicks_change']}%)\n"
-        f"Impressões: {metrics['impressions']} ({comparison['impressions_change']}%)\n"
-        f"CTR: {metrics['ctr']}%\n"
-        f"Custo: R$ {metrics['cost_brl']}\n"
-        f"Conversões: {metrics['conversions']} ({comparison['conversions_change']}%)\n"
-        f"CPA: R$ {metrics['cpa_brl']} ({comparison['cpa_change']}%)\n"
-    )
-
-    if insights:
-        message += "\n💡 Insights\n"
-
-        for insight in insights:
-            message += f"* {insight}\n"
-
-    return message
 
 
 # ---------------------------------------------------------
@@ -140,7 +112,7 @@ def process_client(client, provider, settings, run_id, dry_run):
     insights = generate_insights(metrics_current, comparison)
 
     # construção da mensagem final
-    message = build_whatsapp_summary(
+    message = build_report(
         client,
         metrics_current,
         comparison,
