@@ -26,17 +26,11 @@ import logging
 import argparse
 
 from src.config import Settings
-from src.clients_sheets import load_clients_from_sheets
-from src.data_providers.mock_provider import MockProvider
-from src.report.metrics import aggregate_metrics
-from src.report.comparison import compare_metrics
-from src.report.insights import generate_insights
-from src.delivery.whatsapp_twilio import send_whatsapp_message_with_media
-from src.utils.validation import validate_client
-from src.storage.report_store import save_report
-from src.utils.run_context import generate_run_id
-from src.reporting.report_builder import build_report
-from src.data_providers.google_ads_mcc_provider import GoogleAdsMCCProvider
+from src.data_sources import load_clients_from_sheets, MockProvider, GoogleAdsMCCProvider
+from src.report import aggregate_metrics, compare_metrics, generate_insights, build_report
+from src.delivery import send_whatsapp_message_with_media, save_report
+from src.utils import validate_client, generate_run_id
+
 # ---------------------------------------------------------
 # Configuração básica de logging
 # ---------------------------------------------------------
@@ -52,7 +46,7 @@ logger = logging.getLogger(__name__)
 
 
 
-# ---------------------------------------------------------
+# --------------------------------------------------
 # Envia mensagem WhatsApp
 # --------------------------------------------------
 
